@@ -20,8 +20,12 @@ jobs:
         run: |
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mohansritharan/mtc-monitor/main/monitor.py" -OutFile "monitor.py"
           Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mohansritharan/mtc-monitor/main/config.json" -OutFile "config.json"
+          $py = "python"
           if (Get-Command py -ErrorAction SilentlyContinue) {
-              py -3 monitor.py
-          } else {
-              python monitor.py
+              if (py --list | Select-String "3.12") {
+                  $py = "py -3.12"
+              } else {
+                  $py = "py -3"
+              }
           }
+          Invoke-Expression "$py monitor.py"
