@@ -161,7 +161,7 @@ def login_to_portal(page):
     ocr.set_ranges(string.ascii_letters + string.digits)
 
     logged_in = False
-    max_auto_attempts = 12
+    max_auto_attempts = 25
 
     for attempt in range(1, max_auto_attempts + 1):
         cur_url = page.url.lower().rstrip("/")
@@ -321,15 +321,16 @@ def check_fleet_dashboard(page) -> dict:
     fleet_count = None
 
     try:
-        # Click the dropdown container
-        dropdown = page.locator("xpath=//*[@id='divdd8']/div")
+        # Click the Data Delay dropdown input
+        dropdown = page.locator("input[placeholder='Select Data Delay'], [placeholder='Select Data Delay'], xpath=//*[@id='divdd8']//input, xpath=//*[@id='divdd8']/div").first
         dropdown.wait_for(timeout=10000)
         dropdown.click()
         page.wait_for_timeout(1000)
 
-        # Select "Communicating" option from the dropdown overlay
-        comm_option = page.locator("text=Communicating")
-        comm_option.first.click()
+        # Select "Communicating" option from the dropdown popup
+        comm_option = page.locator("li:has-text('Communicating'), span:has-text('Communicating'), label:has-text('Communicating'), text=Communicating").first
+        comm_option.wait_for(timeout=10000)
+        comm_option.click()
         page.wait_for_timeout(1000)
         print("[FLEET] Selected 'Communicating' from dropdown.")
     except Exception as e:
@@ -340,10 +341,11 @@ def check_fleet_dashboard(page) -> dict:
     try:
         # Click Search/Filter button
         search_btn = page.locator(
+            "button:has-text('Search'), a:has-text('Search'), "
             "xpath=/html/body/ngx-app/ngx-pages/ngx-one-column-layout/nb-layout"
             "/div/div/div/div/div/nb-layout-column/ngx-fleetdashboard/div/div"
             "/kendo-grid/kendo-grid-toolbar/div[1]/div[12]/a"
-        )
+        ).first
         search_btn.click()
         print("[FLEET] Clicked Search button.")
     except Exception as e:
@@ -356,32 +358,42 @@ def check_fleet_dashboard(page) -> dict:
         page.wait_for_selector(".k-loading-mask", state="hidden", timeout=15000)
     except Exception:
         pass
-    page.wait_for_timeout(3000)
+    page.wait_for_timeout(4000)
 
     try:
-        # Extract Total Fleet value
-        total_el = page.locator(
-            "xpath=/html/body/ngx-app/ngx-pages/ngx-one-column-layout/nb-layout"
-            "/div/div/div/div/div/nb-layout-column/ngx-fleetdashboard/div/div"
-            "/div[2]/div[2]"
-        )
-        total_el.wait_for(timeout=10000)
-        raw = total_el.inner_text().strip()
-        print(f"[FLEET] Raw text: {repr(raw)}")
-        # Parse numeric tokens and pick the actual count
+        # 1. Extract Communicating Fleet count from kendo pager (e.g. '1 - 10 of 758 items')
         import re
-        tokens = re.findall(r'\b\d+\b', raw)
-        # If multiple tokens (e.g. date/time followed by count), the last token is the count
-        if tokens:
-            fleet_count = int(tokens[-1])
+        pager_el = page.locator(".k-pager-info").first
+        if pager_el.is_visible(timeout=5000):
+            raw_pager = pager_el.inner_text().strip()
+            print(f"[FLEET] Pager text: {repr(raw_pager)}")
+            m = re.search(r"of\s+([\d,]+)\s+items", raw_pager, re.IGNORECASE)
+            if m:
+                fleet_count = int(m.group(1).replace(",", ""))
+
+        # 2. Fallback to top header card if pager not matched
+        if fleet_count is None:
+            total_el = page.locator(
+                "xpath=/html/body/ngx-app/ngx-pages/ngx-one-column-layout/nb-layout"
+                "/div/div/div/div/div/nb-layout-column/ngx-fleetdashboard/div/div"
+                "/div[2]/div[2]"
+            )
+            total_el.wait_for(timeout=5000)
+            raw = total_el.inner_text().strip()
+            print(f"[FLEET] Header raw text: {repr(raw)}")
+            tokens = re.findall(r'\b\d+\b', raw)
+            if tokens:
+                fleet_count = int(tokens[-1])
+
+        if fleet_count is not None:
+            status = "OK" if fleet_count >= FLEET_MIN_COMM else "BREACH"
+            print(f"[FLEET] Communicating Fleet = {fleet_count} (min: {FLEET_MIN_COMM}) [{status}]")
+            if fleet_count < FLEET_MIN_COMM:
+                alerts.append(f"Communicating Fleet = {fleet_count} (minimum: {FLEET_MIN_COMM})")
         else:
-            fleet_count = int("".join(filter(str.isdigit, raw)))
-        status = "OK" if fleet_count >= FLEET_MIN_COMM else "BREACH"
-        print(f"[FLEET] Communicating Fleet = {fleet_count} (min: {FLEET_MIN_COMM}) [{status}]")
-        if fleet_count < FLEET_MIN_COMM:
-            alerts.append(f"Communicating Fleet = {fleet_count} (minimum: {FLEET_MIN_COMM})")
+            alerts.append("Fleet Dashboard: failed to parse numeric count from pager or header")
     except Exception as e:
-        alerts.append(f"Fleet Dashboard: could not read Total Fleet value ({e})")
+        alerts.append(f"Fleet Dashboard: could not read Communicating Fleet value ({e})")
         print(f"[FLEET] ERROR reading fleet count: {e}")
 
     return {"value": fleet_count, "alerts": alerts}
