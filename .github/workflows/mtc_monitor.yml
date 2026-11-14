@@ -8,12 +8,9 @@ on:
 jobs:
   monitor:
     runs-on: self-hosted
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
       - name: Run MTC Portal Monitor
         shell: powershell
         env:
@@ -21,12 +18,5 @@ jobs:
           MTC_PASSWORD: ${{ secrets.MTC_PASSWORD }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
+          Set-Location "c:\Users\mohan\OneDrive\Desktop\O`&M\mtc-monitor"
           py -3.12 monitor.py
-
-      - name: Upload debug screenshot (on failure)
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: debug-screenshot
-          path: debug_failure.png
-          if-no-files-found: ignore
