@@ -321,14 +321,14 @@ def check_fleet_dashboard(page) -> dict:
     fleet_count = None
 
     try:
-        # Click the Data Delay dropdown input
-        dropdown = page.locator("input[placeholder='Select Data Delay'], [placeholder='Select Data Delay'], xpath=//*[@id='divdd8']//input, xpath=//*[@id='divdd8']/div").first
+        # Click the Data Delay dropdown input using pure CSS selector
+        dropdown = page.locator("input[placeholder='Select Data Delay'], [placeholder='Select Data Delay']").first
         dropdown.wait_for(timeout=10000)
         dropdown.click()
         page.wait_for_timeout(1000)
 
         # Select "Communicating" option from the dropdown popup
-        comm_option = page.locator("li:has-text('Communicating'), span:has-text('Communicating'), label:has-text('Communicating'), text=Communicating").first
+        comm_option = page.locator("li:has-text('Communicating'), span:has-text('Communicating'), text=Communicating").first
         comm_option.wait_for(timeout=10000)
         comm_option.click()
         page.wait_for_timeout(1000)
@@ -340,12 +340,7 @@ def check_fleet_dashboard(page) -> dict:
 
     try:
         # Click Search/Filter button
-        search_btn = page.locator(
-            "button:has-text('Search'), a:has-text('Search'), "
-            "xpath=/html/body/ngx-app/ngx-pages/ngx-one-column-layout/nb-layout"
-            "/div/div/div/div/div/nb-layout-column/ngx-fleetdashboard/div/div"
-            "/kendo-grid/kendo-grid-toolbar/div[1]/div[12]/a"
-        ).first
+        search_btn = page.locator("button:has-text('Search'), a:has-text('Search')").first
         search_btn.click()
         print("[FLEET] Clicked Search button.")
     except Exception as e:
