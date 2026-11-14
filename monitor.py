@@ -161,7 +161,7 @@ def login_to_portal(page):
     ocr.set_ranges(string.ascii_letters + string.digits)
 
     logged_in = False
-    max_auto_attempts = 25
+    max_auto_attempts = 35
 
     for attempt in range(1, max_auto_attempts + 1):
         cur_url = page.url.lower().rstrip("/")
@@ -321,16 +321,47 @@ def check_fleet_dashboard(page) -> dict:
     fleet_count = None
 
     try:
-        # Click the Data Delay dropdown input using pure CSS selector
+        # Click the Data Delay dropdown input
         dropdown = page.locator("input[placeholder='Select Data Delay'], [placeholder='Select Data Delay']").first
         dropdown.wait_for(timeout=10000)
         dropdown.click()
         page.wait_for_timeout(1000)
 
         # Select "Communicating" option from the dropdown popup
-        comm_option = page.locator("li:has-text('Communicating'), span:has-text('Communicating'), text=Communicating").first
-        comm_option.wait_for(timeout=10000)
-        comm_option.click()
+        selected = False
+        # Strategy 1: Kendo option role
+        try:
+            opt = page.get_by_role("option", name="Communicating").first
+            if opt.is_visible(timeout=2000):
+                opt.click()
+                selected = True
+        except Exception:
+            pass
+
+        # Strategy 2: Kendo list item class
+        if not selected:
+            try:
+                opt = page.locator("li.k-item, .k-list-item, li").filter(has_text="Communicating").first
+                if opt.is_visible(timeout=2000):
+                    opt.click()
+                    selected = True
+            except Exception:
+                pass
+
+        # Strategy 3: Text match
+        if not selected:
+            try:
+                opt = page.get_by_text("Communicating", exact=True).first
+                if opt.is_visible(timeout=2000):
+                    opt.click()
+                    selected = True
+            except Exception:
+                pass
+
+        if not selected:
+            # Fallback click via locator filter
+            page.locator("li").filter(has_text="Communicating").first.click()
+
         page.wait_for_timeout(1000)
         print("[FLEET] Selected 'Communicating' from dropdown.")
     except Exception as e:
@@ -434,10 +465,10 @@ def main():
             v4 = pis_vals.get("4L", "N/A")
             v10 = pis_vals.get("10L", "N/A")
             
-            st_2 = "⚠️ BREACH" if (isinstance(v2, int) and v2 > PIS_MAX_DOWN.get("2L", 999)) else "✅ OK"
-            st_4 = "⚠️ BREACH" if (isinstance(v4, int) and v4 > PIS_MAX_DOWN.get("4L", 999)) else "✅ OK"
-            st_10 = "⚠️ BREACH" if (isinstance(v10, int) and v10 > PIS_MAX_DOWN.get("10L", 999)) else "✅ OK"
-            st_comm = "⚠️ BREACH" if (isinstance(comm_val, int) and comm_val < FLEET_MIN_COMM) else "✅ OK"
+            st_2 = "❌ ERROR" if v2 is None else ("⚠️ BREACH" if (isinstance(v2, int) and v2 > PIS_MAX_DOWN.get("2L", 999)) else "✅ OK")
+            st_4 = "❌ ERROR" if v4 is None else ("⚠️ BREACH" if (isinstance(v4, int) and v4 > PIS_MAX_DOWN.get("4L", 999)) else "✅ OK")
+            st_10 = "❌ ERROR" if v10 is None else ("⚠️ BREACH" if (isinstance(v10, int) and v10 > PIS_MAX_DOWN.get("10L", 999)) else "✅ OK")
+            st_comm = "❌ ERROR" if comm_val is None else ("⚠️ BREACH" if (isinstance(comm_val, int) and comm_val < FLEET_MIN_COMM) else "✅ OK")
 
             full_report = (
                 f"MTC Portal Health @ {ts}\n\n"
