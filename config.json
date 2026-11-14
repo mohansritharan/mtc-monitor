@@ -1,0 +1,10 @@
+{
+  "pis_display_max_down": {
+    "2L": 20,
+    "4L": 6,
+    "10L": 3
+  },
+  "fleet_dashboard_min_communicating": 2500,
+  "timezone": "Asia/Kolkata"
+}
+
