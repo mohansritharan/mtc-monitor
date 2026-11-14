@@ -1,0 +1,6 @@
+playwright
+ddddocr
+opencv-python-headless
+numpy
+requests
+
