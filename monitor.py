@@ -5,11 +5,15 @@ All credentials loaded from environment variables (GitHub Secrets).
 """
 
 import os
+import sys
 import json
 import base64
 import string
 import time
 from datetime import datetime, timezone, timedelta
+
+# Ensure unbuffered output
+sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
 import numpy as np
 import cv2
@@ -363,7 +367,15 @@ def check_fleet_dashboard(page) -> dict:
         )
         total_el.wait_for(timeout=10000)
         raw = total_el.inner_text().strip()
-        fleet_count = int("".join(filter(str.isdigit, raw)))
+        print(f"[FLEET] Raw text: {repr(raw)}")
+        # Parse numeric tokens and pick the actual count
+        import re
+        tokens = re.findall(r'\b\d+\b', raw)
+        # If multiple tokens (e.g. date/time followed by count), the last token is the count
+        if tokens:
+            fleet_count = int(tokens[-1])
+        else:
+            fleet_count = int("".join(filter(str.isdigit, raw)))
         status = "OK" if fleet_count >= FLEET_MIN_COMM else "BREACH"
         print(f"[FLEET] Communicating Fleet = {fleet_count} (min: {FLEET_MIN_COMM}) [{status}]")
         if fleet_count < FLEET_MIN_COMM:
