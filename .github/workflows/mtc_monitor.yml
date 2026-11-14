@@ -7,23 +7,17 @@ on:
 
 jobs:
   monitor:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
       - name: Install Playwright Chromium
-        run: playwright install --with-deps chromium
+        run: playwright install chromium
 
       - name: Run MTC Portal Monitor
         env:
