@@ -7,36 +7,21 @@ on:
 
 jobs:
   monitor:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     timeout-minutes: 10
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: pip
-
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
-
-      - name: Install Playwright Chromium
-        run: playwright install --with-deps chromium
-
-      - name: Check portal reachability
-        run: |
-          echo "Testing connectivity to mtcbusits.in..."
-          curl -v --max-time 30 --retry 3 --retry-delay 5 -o /dev/null -w "HTTP Status: %{http_code}\n" https://mtcbusits.in/ || echo "Portal may be slow or restricted"
-
       - name: Run MTC Portal Monitor
+        shell: powershell
         env:
           MTC_USERNAME: ${{ secrets.MTC_USERNAME }}
           MTC_PASSWORD: ${{ secrets.MTC_PASSWORD }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-        run: python monitor.py
+        run: |
+          py -3.12 monitor.py
 
       - name: Upload debug screenshot (on failure)
         uses: actions/upload-artifact@v4
