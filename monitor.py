@@ -419,19 +419,34 @@ def main():
             fleet_result = check_fleet_dashboard(page)
             all_alerts.extend(fleet_result["alerts"])
 
-            # Summary log
-            print(f"\n[SUMMARY] {ts}")
+            # Format full metrics breakdown for all 4 values
             pis_vals = pis_result["values"]
-            print(f"  PIS Down  — 2L: {pis_vals.get('2L')}, 4L: {pis_vals.get('4L')}, 10L: {pis_vals.get('10L')}")
-            print(f"  Fleet Comm — {fleet_result['value']}")
+            comm_val = fleet_result["value"]
+            
+            v2 = pis_vals.get("2L", "N/A")
+            v4 = pis_vals.get("4L", "N/A")
+            v10 = pis_vals.get("10L", "N/A")
+            
+            st_2 = "⚠️ BREACH" if (isinstance(v2, int) and v2 > PIS_MAX_DOWN.get("2L", 999)) else "✅ OK"
+            st_4 = "⚠️ BREACH" if (isinstance(v4, int) and v4 > PIS_MAX_DOWN.get("4L", 999)) else "✅ OK"
+            st_10 = "⚠️ BREACH" if (isinstance(v10, int) and v10 > PIS_MAX_DOWN.get("10L", 999)) else "✅ OK"
+            st_comm = "⚠️ BREACH" if (isinstance(comm_val, int) and comm_val < FLEET_MIN_COMM) else "✅ OK"
+
+            full_report = (
+                f"MTC Portal Health @ {ts}\n\n"
+                f"• 2L PIS Down: {v2} (max: {PIS_MAX_DOWN.get('2L')}) {st_2}\n"
+                f"• 4L PIS Down: {v4} (max: {PIS_MAX_DOWN.get('4L')}) {st_4}\n"
+                f"• 10L PIS Down: {v10} (max: {PIS_MAX_DOWN.get('10L')}) {st_10}\n"
+                f"• Communicating Fleet: {comm_val} (min: {FLEET_MIN_COMM}) {st_comm}"
+            )
+
+            print(f"\n[SUMMARY] {ts}")
+            print(f"  PIS Down   — 2L: {v2}, 4L: {v4}, 10L: {v10}")
+            print(f"  Fleet Comm — {comm_val}")
 
             if all_alerts:
-                alert_body = (
-                    f"MTC Portal Alert @ {ts}\n"
-                    + "\n".join(f"• {a}" for a in all_alerts)
-                )
-                print(f"\n[ALERT] Threshold breach(es) detected:\n{alert_body}")
-                send_alert(alert_body)
+                print(f"\n[ALERT] Threshold breach(es) detected:\n{full_report}")
+                send_alert(full_report)
             else:
                 print("\n[OK] All metrics within thresholds. No alerts sent.")
 
