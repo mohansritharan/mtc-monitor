@@ -140,8 +140,17 @@ def refine_captcha_case(img_bytes: bytes, pred_text: str) -> str:
 # ── Login (adapted from DPCSR.py — no manual fallback, 12 retries) ────────────
 def login_to_portal(page):
     print("[LOGIN]  Navigating to MTC Portal...")
-    page.goto("https://mtcbusits.in/", timeout=45000)
-    page.wait_for_selector("input[formcontrolname='captcha'], input[name='captcha']", timeout=20000)
+    # Retry navigation up to 3 times with 90s timeout
+    for nav_attempt in range(3):
+        try:
+            page.goto("https://mtcbusits.in/", timeout=90000, wait_until="domcontentloaded")
+            break
+        except Exception as e:
+            print(f"[LOGIN]  Navigation attempt {nav_attempt+1} failed: {e}")
+            if nav_attempt == 2:
+                raise RuntimeError(f"Cannot reach https://mtcbusits.in/ after 3 attempts: {e}")
+            page.wait_for_timeout(5000)
+    page.wait_for_selector("input[formcontrolname='captcha'], input[name='captcha']", timeout=30000)
 
     # Initialize fast OCR
     ocr = ddddocr.DdddOcr(beta=True, show_ad=False)
