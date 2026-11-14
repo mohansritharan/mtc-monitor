@@ -18,5 +18,10 @@ jobs:
           MTC_PASSWORD: ${{ secrets.MTC_PASSWORD }}
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
         run: |
-          Set-Location "c:\Users\mohan\OneDrive\Desktop\O`&M\mtc-monitor"
-          py -3.12 monitor.py
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mohansritharan/mtc-monitor/main/monitor.py" -OutFile "monitor.py"
+          Invoke-WebRequest -Uri "https://raw.githubusercontent.com/mohansritharan/mtc-monitor/main/config.json" -OutFile "config.json"
+          if (Get-Command py -ErrorAction SilentlyContinue) {
+              py -3 monitor.py
+          } else {
+              python monitor.py
+          }
